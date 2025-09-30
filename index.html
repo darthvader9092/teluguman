@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OCR to Telugu Translator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 30px;
+        }
+
+        .upload-area:hover {
+            background: #f8f9ff;
+            border-color: #764ba2;
+        }
+
+        .upload-area.dragover {
+            background: #e8ecff;
+            border-color: #667eea;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .upload-icon {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 30px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .preview-area {
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        #imagePreview {
+            max-width: 100%;
+            max-height: 400px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .result-area {
+            display: none;
+            margin-top: 30px;
+        }
+
+        .text-box {
+            width: 100%;
+            min-height: 150px;
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1.1em;
+            margin: 10px 0;
+            resize: vertical;
+        }
+
+        .text-box:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .label {
+            font-weight: bold;
+            color: #333;
+            margin: 15px 0 5px 0;
+            display: block;
+            font-size: 1.1em;
+        }
+
+        .telugu-text {
+            font-size: 1.3em;
+            line-height: 1.8;
+        }
+
+        .error, .success {
+            text-align: center;
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .error {
+            color: #d32f2f;
+            background: #ffebee;
+        }
+
+        .success {
+            color: #2e7d32;
+            background: #e8f5e9;
+        }
+
+        .button-group {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .copy-btn {
+            background: #4caf50;
+            padding: 10px 30px;
+            font-size: 1em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📸 OCR to Telugu</h1>
+        <p class="subtitle">Upload an image → Extract text → Translate to Telugu</p>
+
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📁</div>
+            <h3>Click or Drag & Drop Image Here</h3>
+            <p>Supports JPG, PNG, JPEG</p>
+            <input type="file" id="fileInput" accept="image/*">
+        </div>
+
+        <div class="preview-area">
+            <img id="imagePreview" style="display:none;">
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Processing image and translating...</p>
+        </div>
+
+        <div class="error" id="errorMsg"></div>
+        <div class="success" id="successMsg"></div>
+
+        <div class="result-area" id="resultArea">
+            <label class="label">Extracted English Text:</label>
+            <textarea class="text-box" id="extractedText" readonly></textarea>
+
+            <label class="label">Telugu Translation (తెలుగు):</label>
+            <textarea class="text-box telugu-text" id="teluguText" readonly></textarea>
+
+            <div class="button-group">
+                <button class="btn copy-btn" onclick="copyTelugu()">Copy Telugu Text</button>
+                <button class="btn" onclick="reset()">Upload New Image</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const imagePreview = document.getElementById('imagePreview');
+        const loading = document.getElementById('loading');
+        const extractedText = document.getElementById('extractedText');
+        const teluguText = document.getElementById('teluguText');
+        const resultArea = document.getElementById('resultArea');
+        const errorMsg = document.getElementById('errorMsg');
+        const successMsg = document.getElementById('successMsg');
+
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                handleImage(file);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                handleImage(file);
+            }
+        });
+
+        async function handleImage(file) {
+            hideMessages();
+            resultArea.style.display = 'none';
+            
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                imagePreview.src = e.target.result;
+                imagePreview.style.display = 'block';
+                
+                await uploadToServer(file);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function uploadToServer(file) {
+            loading.style.display = 'block';
+            
+            const formData = new FormData();
+            formData.append('image', file);
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                loading.style.display = 'none';
+
+                if (data.success) {
+                    extractedText.value = data.extracted_text;
+                    teluguText.value = data.telugu_text;
+                    resultArea.style.display = 'block';
+                    showSuccess('Translation completed successfully!');
+                } else {
+                    showError(data.error || 'An error occurred');
+                }
+            } catch (error) {
+                loading.style.display = 'none';
+                showError('Failed to connect to server. Make sure the Flask app is running.');
+            }
+        }
+
+        function copyTelugu() {
+            teluguText.select();
+            document.execCommand('copy');
+            showSuccess('Telugu text copied to clipboard!');
+        }
+
+        function reset() {
+            fileInput.value = '';
+            imagePreview.style.display = 'none';
+            resultArea.style.display = 'none';
+            hideMessages();
+            extractedText.value = '';
+            teluguText.value = '';
+        }
+
+        function showError(message) {
+            errorMsg.textContent = message;
+            errorMsg.style.display = 'block';
+            setTimeout(() => errorMsg.style.display = 'none', 5000);
+        }
+
+        function showSuccess(message) {
+            successMsg.textContent = message;
+            successMsg.style.display = 'block';
+            setTimeout(() => successMsg.style.display = 'none', 3000);
+        }
+
+        function hideMessages() {
+            errorMsg.style.display = 'none';
+            successMsg.style.display = 'none';
+        }
+    </script>
+</body>
+</html>
